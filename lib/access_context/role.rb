@@ -33,11 +33,11 @@ class AccessContext
 
     def initialize(name, permission_names)
       @name = name
-      @permission_names = (permission_names || []).map(&:to_sym).uniq
+      @permission_names = ([permission_names] || []).flatten.map(&:to_sym).uniq
     end
 
     def add_permissions(names)
-      symbolized_names = (names || []).map(&:to_sym)
+      symbolized_names = ([names] || []).flatten.map(&:to_sym)
       @permission_names = (@permission_names + symbolized_names).uniq
     end
 

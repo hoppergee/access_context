@@ -11,6 +11,7 @@ require "access_context"
 
 require "minitest/autorun"
 require "debug"
+require 'ostruct'
 
 require 'setup_access_context'
 

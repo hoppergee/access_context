@@ -1,34 +1,144 @@
 # AccessContext
 
-TODO: Delete this and the text below, and describe your gem
-
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/access_context`. To experiment with that code, run `bin/console` for an interactive prompt.
+A flexible and efficient context based permission management library for Ruby applications.
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
-Install the gem and add to the application's Gemfile by executing:
-
-    $ bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
-
-If bundler is not being used to manage dependencies, install the gem by executing:
-
-    $ gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+$ bundle add access_context
+```
 
 ## Usage
 
-TODO: Write usage instructions here
+1. Setup roles and permission with context
+
+```ruby
+AccessContext.config do
+
+  roles do
+    grant :admin, ['default', 'order_read', 'admin_default']
+    grant :support, 'default'
+    grant :support, 'order_read'
+  end
+
+  permissions do
+    grant 'default' do
+      controller :home, [:show]
+      controller :dashboard, [:show]
+      service :visit, :call
+      job :welcome, :perform
+    end
+    grant 'admin_default' do
+      controller 'admin/dashboard', [:show]
+      context :controller, "admin/orders", :show
+    end
+    grant 'order_read' do
+      controller :orders, [:show]
+      view 'admin/orders', ["order_edit_button"]
+    end
+  end
+
+end
+```
+
+2. Check access by role on each context
+
+```ruby
+AccessContext.controller(:home, :show).permit_role?(:admin) #=> true
+AccessContext.service(:visit, :call).permit_role?(:support) #=> true
+AccessContext.job(:welcome, :perform).permit_role?(:admin) #=> true
+AccessContext.view("admin/orders", :order_edit_button).permit_role?(:support) #=> false
+```
+
+Or we can use `permit?` if we have `role` column/attribute on `User`.
+
+```ruby
+admin = User.new(role: :admin)
+AccessContext.controller(:home, :show).permit?(admin) #=> true
+AccessContext.job(:welcome, :perform).permit?(admin) #=> true
+
+support = User.new(role: :support)
+AccessContext.service(:visit, :call).permit?(support) #=> true
+AccessContext.view("admin/orders", :order_edit_button).permit?(support) #=> false
+```
+
+3. Integrate it with Rails 
+
+```ruby
+# Controller
+class ApplicationController < ActionController::Base
+  before_action :verify_permission
+
+  private
+
+  def verify_permission
+    return unless current_user
+
+    controller_name = self.class.name.underscore.sub(/_controller$/, '')
+    context = AccessContext.new(controller_name, action_name)
+    head :forbidden unless context.permit?(current_user)
+  end
+end
+
+# View: app/views/home/index.html.erb
+<%= context = AccessContext.view(:home, :login_button) %>
+
+<%= if context.permit?(current_user) %>
+    <button>Login</button>
+<% end %>
+
+# Job: app/jobs/notify_job.rb
+class NotifyJob < ApplicationJob
+
+    def perform(user_id)
+        user = User.find(user_id)
+        context = AccessContext.job(:notify_job, :perform)
+        if context.permit?(user)
+            # ...
+        end
+    end
+
+end
+
+# Service app/services/order_service.rb
+class OrderService
+    def initialize(user)
+        @user = user
+    end
+
+    def test_a
+        if AccessContext.service(:order, :test_a).permit?(@user)
+            # ...
+        end
+    end
+
+    def test_b
+        if AccessContext.service(:order, :test_b).permit?(@user)
+            # ...
+        end
+    end
+end
+```
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```ruby
+bundle install
+meval bundle install
+meval rake
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+# Test with a specific Ruby version
+meval -r 3.1 bundle install
+meval -r 3.1 rake
+
+# Or test for all support Ruby version
+meavl -a bundle install
+meavl -a rake
+```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/access_context. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/access_context/blob/main/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome on GitHub at https://github.com/hoppergee/access_context. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/hoppergee/access_context/blob/main/CODE_OF_CONDUCT.md).
 
 ## License
 
@@ -36,4 +146,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the AccessContext project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/access_context/blob/main/CODE_OF_CONDUCT.md).
+Everyone interacting in the AccessContext project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/hoppergee/access_context/blob/main/CODE_OF_CONDUCT.md).

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "access_context/version"
+require 'active_support/dependencies/autoload'
+require 'active_support/core_ext'
 
 class AccessContext
 
@@ -36,10 +38,10 @@ class AccessContext
 
   attr_reader :type, :name, :target
 
-  def initialize(type, name, target)
+  def initialize(type, name, target=nil)
     @type = type.to_sym
     @name = name.to_sym
-    @target = target.to_sym
+    @target = target&.to_sym
   end
 
   def permit?(user)
@@ -52,10 +54,13 @@ class AccessContext
     end
   end
 
-  def ==(context)
+  def contains?(context)
     type == context.type &&
     name == context.name &&
-    target == context.target
+    (
+      target == context.target ||
+      target.blank?
+    )
   end
 
 end

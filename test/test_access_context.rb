@@ -15,13 +15,15 @@ class TestAccessContext < ApplicationTest
     assert_equal :new, context.target
   end
 
-  def test_equal
-    c = ->(type, name, target) { AccessContext.new(type, name, target) }
-    assert_equal c.("controller", "Users", "new"), c.("controller", "Users", "new")
-    assert_equal c.(:controller, :Users, :new), c.("controller", "Users", "new")
-    refute_equal c.(:controller, :Users, :new), c.(:controller, :Users, :show)
-    refute_equal c.(:controller, :Users, :new), c.(:controller, :Orders, :new)
-    refute_equal c.(:controller, :Users, :new), c.(:service, :Users, :new)
+  def test_contains
+    c = ->(type, name, target = nil) { AccessContext.new(type, name, target) }
+    assert c.("controller", "Users", "new").contains?(c.("controller", "Users", "new"))
+    assert c.(:controller, :Users, :new).contains?(c.("controller", "Users", "new"))
+    refute c.(:controller, :Users, :new).contains?(c.(:controller, :Users, :show))
+    refute c.(:controller, :Users, :new).contains?(c.(:controller, :Orders, :new))
+    refute c.(:controller, :Users, :new).contains?(c.(:service, :Users, :new))
+
+    assert c.(:controller, "admin/products").contains?(c.(:controller, "admin/products", :new))
   end
 
   def test_permit_role

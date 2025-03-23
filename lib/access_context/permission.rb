@@ -28,13 +28,17 @@ class AccessContext
 
     def permit?(context)
       contexts.any? do |c|
-        c == context
+        c.contains?(context)
       end
     end
 
     def context(type, name, targets=[])
-      ([targets] || []).flatten.each do |target|
-        contexts << AccessContext.new(type, name, target)
+      if targets.present?
+        ([targets] || []).flatten.each do |target|
+          contexts << AccessContext.new(type, name, target)
+        end
+      else
+        contexts << AccessContext.new(type, name)
       end
     end
 

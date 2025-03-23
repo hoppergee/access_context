@@ -14,6 +14,7 @@ AccessContext.config do
     grant 'admin_default' do
       controller 'admin/dashboard', [:show]
       context :controller, "admin/orders", :show
+      controller "admin/products"
     end
     grant 'order_read' do
       controller :orders, [:show]

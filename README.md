@@ -29,6 +29,7 @@ AccessContext.config do
       job :welcome, :perform
     end
     grant 'admin_default' do
+      controller "admin/products"
       controller 'admin/dashboard', [:show]
       context :controller, "admin/orders", :show
     end
